@@ -56,6 +56,7 @@ pub fn process_md_file<P: AsRef<Path>>(path: P) -> io::Result<(bool, bool)> {
 }
 
 /// Remove multiple consecutive blank lines, keeping only single blank lines.
+/// This function preserves frontmatter and code fence contents.
 ///
 /// # Arguments
 ///
@@ -68,17 +69,59 @@ fn remove_multiple_blank_lines(content: &str) -> String {
     let lines: Vec<&str> = content.lines().collect();
     let mut result = Vec::new();
     let mut prev_was_empty = false;
+    let mut in_frontmatter = false;
+    let mut in_code_fence = false;
+    let mut code_fence_marker = "";
 
-    for line in lines {
+    for (i, line) in lines.iter().enumerate() {
+        // Check for frontmatter start/end
+        if i == 0 && line.trim() == "---" {
+            in_frontmatter = true;
+            result.push(*line);
+            continue;
+        } else if in_frontmatter && line.trim() == "---" {
+            in_frontmatter = false;
+            result.push(*line);
+            continue;
+        }
+
+        // Check for code fence start/end
+        if !in_frontmatter {
+            let trimmed = line.trim();
+            if (trimmed.starts_with("```") || trimmed.starts_with("~~~")) && !in_code_fence {
+                // Starting a code fence
+                in_code_fence = true;
+                code_fence_marker = if trimmed.starts_with("```") { "```" } else { "~~~" };
+                result.push(*line);
+                prev_was_empty = false;
+                continue;
+            } else if in_code_fence && (trimmed.starts_with(code_fence_marker) && trimmed.len() >= code_fence_marker.len()) {
+                // Ending a code fence - must start with the same marker
+                in_code_fence = false;
+                code_fence_marker = "";
+                result.push(*line);
+                prev_was_empty = false;
+                continue;
+            }
+        }
+
+        // If we're inside frontmatter or code fence, don't process blank lines
+        if in_frontmatter || in_code_fence {
+            result.push(*line);
+            prev_was_empty = false;
+            continue;
+        }
+
+        // Normal blank line processing for content outside protected areas
         let is_empty = line.trim().is_empty();
 
         if is_empty {
             if !prev_was_empty {
-                result.push(line);
+                result.push(*line);
             }
             prev_was_empty = true;
         } else {
-            result.push(line);
+            result.push(*line);
             prev_was_empty = false;
         }
     }
@@ -119,5 +162,48 @@ mod tests {
             remove_multiple_blank_lines(input_no_newline),
             expected_no_newline
         );
+    }
+
+    #[test]
+    fn test_preserve_frontmatter() {
+        let input = "---\ntitle: Test\n\n\n\nauthor: Me\n---\n\n\n\nContent here\n\n\n\nMore content";
+        let expected = "---\ntitle: Test\n\n\n\nauthor: Me\n---\n\nContent here\n\nMore content";
+        assert_eq!(remove_multiple_blank_lines(input), expected);
+    }
+
+    #[test]
+    fn test_preserve_code_fences() {
+        let input = "Some text\n\n\n\n```rust\nfn main() {\n\n\n\n    println!(\"Hello\");\n}\n```\n\n\n\nMore text";
+        let expected = "Some text\n\n```rust\nfn main() {\n\n\n\n    println!(\"Hello\");\n}\n```\n\nMore text";
+        assert_eq!(remove_multiple_blank_lines(input), expected);
+    }
+
+    #[test]
+    fn test_preserve_tilde_code_fences() {
+        let input = "Some text\n\n\n\n~~~python\ndef hello():\n\n\n\n    print(\"Hello\")\n~~~\n\n\n\nMore text";
+        let expected = "Some text\n\n~~~python\ndef hello():\n\n\n\n    print(\"Hello\")\n~~~\n\nMore text";
+        assert_eq!(remove_multiple_blank_lines(input), expected);
+    }
+
+    #[test]
+    fn test_frontmatter_and_code_fences_combined() {
+        let input = "---\ntitle: Test\n\n\n\nauthor: Me\n---\n\n\n\nSome text\n\n\n\n```rust\nfn test() {\n\n\n\n    // code\n}\n```\n\n\n\nEnd";
+        let expected = "---\ntitle: Test\n\n\n\nauthor: Me\n---\n\nSome text\n\n```rust\nfn test() {\n\n\n\n    // code\n}\n```\n\nEnd";
+        assert_eq!(remove_multiple_blank_lines(input), expected);
+    }
+
+    #[test]
+    fn test_nested_code_fences_not_supported() {
+        // This test documents current behavior - nested code fences are not supported
+        // The first closing fence will end the code block
+        let input = "```\ncode\n```inner\nmore code\n```\n\n\n\ntext";
+        // Breakdown:
+        // 1. ``` starts code fence
+        // 2. ```inner ends it (because it starts with ```)
+        // 3. "more code" is normal text (no blank line processing needed)
+        // 4. ``` starts a new code fence 
+        // 5. "\n\n\n\ntext" is inside the new code fence (preserved as-is)
+        let expected = "```\ncode\n```inner\nmore code\n```\n\n\n\ntext";
+        assert_eq!(remove_multiple_blank_lines(input), expected);
     }
 }

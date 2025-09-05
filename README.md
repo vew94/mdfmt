@@ -1,30 +1,31 @@
 # mdfmt
 
-> A fast, lightweight Markdown formatter designed for cleaning up and maintaining markdown files.
+> A fast, lightweight Markdown formatter that intelligently cleans up your markdown files while preserving structure and content.
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/vew94/mdfmt)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Rust](https://img.shields.io/badge/rust-1.80+-orange.svg)](https://www.rust-lang.org)
+[![Rust](https://img.shields.io/badge/rust-1.85+-orange.svg)](https://www.rust-lang.org)
 
 **mdfmt** is a high-performance Rust-based tool that helps you maintain clean and consistent Markdown files by:
 
-- Removing multiple consecutive blank lines
+- Removing multiple consecutive blank lines while preserving document structure
+- Protecting frontmatter and code blocks from formatting changes
 - Deleting empty files (completely empty or containing only frontmatter)
-- Processing files recursively across directories
+- Processing files recursively across directories with parallel execution
 - Providing detailed feedback on all operations
 
-Perfect for maintaining documentation, blog posts, and any Markdown-based content at scale.
+Perfect for maintaining documentation, blog posts, and any Markdown-based content at scale without breaking your carefully crafted code examples or YAML frontmatter.
 
-## Features
+## ✨ Features
 
-- **Fast Processing**: Built with Rust for maximum performance, using parallel processing
-- **Smart Cleanup**: Removes multiple consecutive blank lines while preserving document structure
-- **Empty File Handling**: Automatically detects and removes empty files or files with only frontmatter
-- **Frontmatter Support**: Properly handles YAML frontmatter in Markdown files
-- **Recursive Search**: Processes all `.md` files in a directory tree
-- **Dry Run Mode**: Preview changes before applying them
-- **Verbose Output**: Optional detailed logging of all operations
-- **Error Handling**: Robust error reporting with detailed summaries
+- **🚀 Fast Processing**: Built with Rust for maximum performance, using parallel processing with Rayon
+- **🎯 Smart Cleanup**: Removes multiple consecutive blank lines while preserving document structure
+- **🛡️ Content Protection**: Preserves frontmatter and code fence contents unchanged
+- **🗑️ Empty File Handling**: Automatically detects and removes empty files or files with only frontmatter
+- **📁 Recursive Search**: Processes all `.md` files in a directory tree
+- **👀 Dry Run Mode**: Preview changes before applying them
+- **📊 Verbose Output**: Optional detailed logging of all operations
+- **⚡ Error Handling**: Robust error reporting with detailed summaries
 
 ## Installation
 
@@ -121,9 +122,11 @@ Would process: ./blog-posts/2024/draft.md
 ...
 ```
 
-## What it does
+## 🎯 What it does
 
 ### Multiple Blank Line Removal
+
+mdfmt intelligently removes excessive blank lines while preserving content structure and protecting special markdown sections.
 
 **Before:**
 ```markdown
@@ -154,6 +157,52 @@ More content here.
 End of document.
 ```
 
+### 🛡️ Content Protection
+
+**Frontmatter Protection**: YAML frontmatter blocks are completely preserved, including their internal spacing:
+
+```markdown
+---
+title: "My Post"
+
+
+author: "John Doe"
+tags:
+  - markdown
+  - formatting
+
+
+date: 2024-01-01
+---
+```
+*↑ All spacing within frontmatter is preserved exactly as-is*
+
+**Code Fence Protection**: Code blocks maintain their original formatting:
+
+````markdown
+```rust
+fn main() {
+
+
+    println!("Hello, world!");
+
+
+    // Multiple blank lines preserved in code
+}
+```
+
+~~~python
+def hello():
+
+
+    print("Spacing preserved here too!")
+
+
+    return "done"
+~~~
+````
+*↑ All spacing within code fences is preserved exactly as-is*
+
 ### Empty File Handling
 
 The tool will delete files that are:
@@ -178,9 +227,10 @@ date: 2024-01-01
 mdfmt is designed for speed and efficiency:
 
 - **Parallel Processing**: Uses Rayon for concurrent file processing
-- **Memory Efficient**: Processes files one at a time without loading entire directory structures
+- **Memory Efficient**: Processes files one at a time without loading entire directory structures  
 - **Fast Pattern Matching**: Uses optimized glob patterns for file discovery
-- **Zero Dependencies**: Minimal runtime overhead
+- **Smart Content Analysis**: Efficiently detects and preserves frontmatter and code blocks
+- **Minimal Dependencies**: Only essential dependencies for maximum performance
 
 Benchmarks on a typical documentation directory:
 - **100 files**: ~50ms
@@ -191,7 +241,7 @@ Benchmarks on a typical documentation directory:
 
 ### Requirements
 
-- Rust 1.80 or later
+- Rust 1.85 or later
 - Cargo (included with Rust)
 
 ### Build Steps
@@ -217,10 +267,11 @@ cargo install --path .
 
 mdfmt includes comprehensive safety measures:
 
+- **Content Protection**: Never modifies frontmatter or code fence contents
 - **Backup Recommendations**: Always backup important files before batch processing
 - **Dry Run Mode**: Preview all changes before applying them
 - **Error Recovery**: Detailed error reporting for any failed operations
-- **Content Preservation**: Never modifies actual content, only formatting
+- **Structure Preservation**: Only removes excessive blank lines, never modifies actual content
 - **Atomic Operations**: Each file is processed independently
 
 > [!WARNING]
