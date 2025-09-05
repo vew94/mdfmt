@@ -51,8 +51,8 @@ jobs:
           rustup update stable
           rustup default stable
           rustup override set stable
-          rustup component add rustfmt --toolchain stable
-          rustup component add clippy --toolchain stable
+          rustup component add rustfmt
+          rustup component add clippy
 
       - name: Check formatting
         run: cargo fmt --all -- --check
