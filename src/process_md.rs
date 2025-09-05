@@ -84,6 +84,10 @@ fn remove_multiple_blank_lines(content: &str) -> String {
         } else if in_frontmatter && line.trim() == "---" {
             in_frontmatter = false;
             result.push(*line);
+            // Add a blank line after frontmatter ends only if next line is not already blank
+            if lines.get(i + 1).map_or(false, |next| !next.trim().is_empty()) {
+                result.push("");
+            }
             continue;
         }
 
