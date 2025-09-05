@@ -57,8 +57,9 @@ pub fn process_md_file<P: AsRef<Path>>(path: P) -> io::Result<(bool, bool)> {
     }
 }
 
-/// Remove multiple consecutive blank lines, keeping only single blank lines.
-/// This function preserves frontmatter and code fence contents.
+/// Remove multiple consecutive blank lines and ensure proper spacing around markdown elements.
+/// This function preserves frontmatter and code fence contents while adding blank lines
+/// around headings, code fences, and list markers.
 ///
 /// # Arguments
 ///
@@ -66,7 +67,8 @@ pub fn process_md_file<P: AsRef<Path>>(path: P) -> io::Result<(bool, bool)> {
 ///
 /// # Returns
 ///
-/// The processed content with multiple blank lines reduced to single blank lines.
+/// The processed content with multiple blank lines reduced to single blank lines
+/// and proper spacing around markdown elements.
 fn remove_multiple_blank_lines(content: &str) -> String {
     let lines: Vec<&str> = content.lines().collect();
     let mut result = Vec::new();
@@ -74,6 +76,17 @@ fn remove_multiple_blank_lines(content: &str) -> String {
     let mut in_frontmatter = false;
     let mut in_code_fence = false;
     let mut code_fence_marker = "";
+
+    // Helper functions for detecting markdown elements
+    let is_heading = |line: &str| {
+        let trimmed = line.trim();
+        trimmed.starts_with('#') && trimmed.chars().take_while(|c| *c == '#').count() <= 6
+    };
+    let is_list_marker = |line: &str| {
+        let trimmed = line.trim();
+        trimmed.starts_with("- ") || trimmed.starts_with("* ") || trimmed.starts_with("+ ") ||
+            (trimmed.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) && trimmed.contains(". "))
+    };
 
     for (i, line) in lines.iter().enumerate() {
         // Check for frontmatter start/end
@@ -85,7 +98,7 @@ fn remove_multiple_blank_lines(content: &str) -> String {
             in_frontmatter = false;
             result.push(*line);
             // Add a blank line after frontmatter ends only if next line is not already blank
-            if lines.get(i + 1).map_or(false, |next| !next.trim().is_empty()) {
+            if lines.get(i + 1).is_some_and(|next| !next.trim().is_empty()) {
                 result.push("");
             }
             continue;
@@ -95,6 +108,10 @@ fn remove_multiple_blank_lines(content: &str) -> String {
         if !in_frontmatter {
             let trimmed = line.trim();
             if (trimmed.starts_with("```") || trimmed.starts_with("~~~")) && !in_code_fence {
+                // Insert blank line before code fence if previous line is not blank
+                if !result.is_empty() && result.last().is_some_and(|l| !l.trim().is_empty()) {
+                    result.push("");
+                }
                 // Starting a code fence
                 in_code_fence = true;
                 code_fence_marker = if trimmed.starts_with("```") { "```" } else { "~~~" };
@@ -106,6 +123,10 @@ fn remove_multiple_blank_lines(content: &str) -> String {
                 in_code_fence = false;
                 code_fence_marker = "";
                 result.push(*line);
+                // Insert blank line after code fence if next line is not blank
+                if lines.get(i + 1).is_some_and(|next| !next.trim().is_empty()) {
+                    result.push("");
+                }
                 prev_was_empty = false;
                 continue;
             }
@@ -116,6 +137,14 @@ fn remove_multiple_blank_lines(content: &str) -> String {
             result.push(*line);
             prev_was_empty = false;
             continue;
+        }
+
+        // Insert blank line before heading or list group start if previous line is not blank
+        let is_list_group_start = is_list_marker(line) && 
+            (i == 0 || !is_list_marker(lines.get(i.saturating_sub(1)).unwrap_or(&"")));
+        
+        if (is_heading(line) || is_list_group_start) && !result.is_empty() && result.last().is_some_and(|l| !l.trim().is_empty()) {
+            result.push("");
         }
 
         // Normal blank line processing for content outside protected areas
@@ -129,6 +158,14 @@ fn remove_multiple_blank_lines(content: &str) -> String {
         } else {
             result.push(*line);
             prev_was_empty = false;
+        }
+
+        // Insert blank line after heading or list group end if next line is not blank
+        let is_list_group_end = is_list_marker(line) && 
+            !lines.get(i + 1).map(|next| is_list_marker(next)).unwrap_or(false);
+            
+        if (is_heading(line) || is_list_group_end) && lines.get(i + 1).is_some_and(|next| !next.trim().is_empty()) {
+            result.push("");
         }
     }
 
@@ -209,7 +246,42 @@ mod tests {
         // 3. "more code" is normal text (no blank line processing needed)
         // 4. ``` starts a new code fence
         // 5. "\n\n\n\ntext" is inside the new code fence (preserved as-is)
-        let expected = "```\ncode\n```inner\nmore code\n```\n\n\n\ntext";
+        let expected = "```\ncode\n```inner\n\nmore code\n\n```\n\n\n\ntext";
+        assert_eq!(remove_multiple_blank_lines(input), expected);
+    }
+
+    #[test]
+    fn test_heading_and_list_blank_lines() {
+        let input = "Text\n# Heading1\nText\n- item1\n- item2\nText\n1. item3\n2. item4\nText\n* item5\n* item6\nText\n+ item7\n+ item8\nText";
+        let expected = "Text\n\n# Heading1\n\nText\n\n- item1\n- item2\n\nText\n\n1. item3\n2. item4\n\nText\n\n* item5\n* item6\n\nText\n\n+ item7\n+ item8\n\nText";
+        assert_eq!(remove_multiple_blank_lines(input), expected);
+    }
+
+    #[test]
+    fn test_code_fence_blank_lines() {
+        let input = "Text\n```rust\nfn main() {}\n```\nText";
+        let expected = "Text\n\n```rust\nfn main() {}\n```\n\nText";
+        assert_eq!(remove_multiple_blank_lines(input), expected);
+    }
+
+    #[test]
+    fn test_no_extra_blank_lines_for_existing() {
+        let input = "Text\n\n# Heading\n\nText\n\n- item\n\nText";
+        let expected = "Text\n\n# Heading\n\nText\n\n- item\n\nText";
+        assert_eq!(remove_multiple_blank_lines(input), expected);
+    }
+
+    #[test]
+    fn test_consecutive_list_items() {
+        let input = "Text\n- A\n- B\n- C\nText";
+        let expected = "Text\n\n- A\n- B\n- C\n\nText";
+        assert_eq!(remove_multiple_blank_lines(input), expected);
+    }
+
+    #[test]
+    fn test_mixed_list_types() {
+        let input = "Text\n- A\n* B\n+ C\n1. D\n2. E\nText";
+        let expected = "Text\n\n- A\n* B\n+ C\n1. D\n2. E\n\nText";
         assert_eq!(remove_multiple_blank_lines(input), expected);
     }
 }

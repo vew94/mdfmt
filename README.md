@@ -9,6 +9,7 @@
 **mdfmt** is a high-performance Rust-based tool that helps you maintain clean and consistent Markdown files by:
 
 - Removing multiple consecutive blank lines while preserving document structure
+- Ensuring proper spacing around headings, code blocks, and list markers
 - Protecting frontmatter and code blocks from formatting changes
 - Deleting empty files (completely empty or containing only frontmatter)
 - Processing files recursively across directories with parallel execution
@@ -20,7 +21,8 @@ Perfect for maintaining documentation, blog posts, and any Markdown-based conten
 
 - **🚀 Fast Processing**: Built with Rust for maximum performance, using parallel processing with Rayon
 - **🎯 Smart Cleanup**: Removes multiple consecutive blank lines while preserving document structure
-- **🛡️ Content Protection**: Preserves frontmatter and code fence contents unchanged
+- **Proper Spacing**: Ensures blank lines around headings, code blocks, and list markers for better readability
+- **Content Protection**: Preserves frontmatter and code fence contents unchanged
 - **🗑️ Empty File Handling**: Automatically detects and removes empty files or files with only frontmatter
 - **📁 Recursive Search**: Processes all `.md` files in a directory tree
 - **👀 Dry Run Mode**: Preview changes before applying them
@@ -124,9 +126,9 @@ Would process: ./blog-posts/2024/draft.md
 
 ## 🎯 What it does
 
-### Multiple Blank Line Removal
+### Multiple Blank Line Removal & Proper Spacing
 
-mdfmt intelligently removes excessive blank lines while preserving content structure and protecting special markdown sections.
+mdfmt intelligently removes excessive blank lines while preserving content structure and protecting special markdown sections. It also ensures proper spacing around markdown elements for better readability.
 
 **Before:**
 ```markdown
@@ -135,11 +137,10 @@ mdfmt intelligently removes excessive blank lines while preserving content struc
 
 
 This is some content.
-
-
-
-
+## Subsection
 More content here.
+- List item 1
+- List item 2
 
 
 
@@ -152,7 +153,12 @@ End of document.
 
 This is some content.
 
+## Subsection
+
 More content here.
+
+- List item 1
+- List item 2
 
 End of document.
 ```
@@ -227,14 +233,14 @@ date: 2024-01-01
 mdfmt is designed for speed and efficiency:
 
 - **Parallel Processing**: Uses Rayon for concurrent file processing
-- **Memory Efficient**: Processes files one at a time without loading entire directory structures  
+- **Memory Efficient**: Processes files one at a time without loading entire directory structures
 - **Fast Pattern Matching**: Uses optimized glob patterns for file discovery
 - **Smart Content Analysis**: Efficiently detects and preserves frontmatter and code blocks
 - **Minimal Dependencies**: Only essential dependencies for maximum performance
 
 Benchmarks on a typical documentation directory:
 - **100 files**: ~50ms
-- **1,000 files**: ~200ms  
+- **1,000 files**: ~200ms
 - **10,000 files**: ~1.5s
 
 ## Building from Source
