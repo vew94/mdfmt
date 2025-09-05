@@ -1,8 +1,16 @@
+//! Markdown processing functionality for removing multiple blank lines and handling empty files.
+//!
+//! This module provides functions to process markdown files by removing excessive blank lines
+//! while preserving important formatting like frontmatter and code blocks.
+
 use std::fs;
 use std::io;
 use std::path::Path;
 
 /// Process a markdown file to remove multiple consecutive blank lines and handle empty files.
+///
+/// This function reads a markdown file, processes its content to remove excessive blank lines,
+/// and optionally deletes empty files. It preserves frontmatter content and code fence blocks.
 ///
 /// Returns a tuple of (deleted, modified) where:
 /// - `deleted` indicates if the file was deleted (empty body with only frontmatter)
@@ -12,6 +20,20 @@ use std::path::Path;
 ///
 /// * `path` - Path to the markdown file to process
 /// * `allow_delete` - Whether to allow deletion of empty files
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use mdfmt::process_md::process_md_file;
+/// use std::path::Path;
+///
+/// // Process a file without allowing deletion
+/// let (deleted, modified) = process_md_file(Path::new("example.md"), false)?;
+/// if modified {
+///     println!("File was modified");
+/// }
+/// # Ok::<(), std::io::Error>(())
+/// ```
 ///
 /// # Errors
 ///
@@ -81,7 +103,36 @@ pub fn process_md_file<P: AsRef<Path>>(path: P, allow_delete: bool) -> io::Resul
 ///
 /// The processed content with multiple blank lines reduced to single blank lines
 /// and proper spacing around markdown elements.
-fn remove_multiple_blank_lines(content: &str) -> String {
+///
+/// # Examples
+///
+/// Basic usage:
+/// ```
+/// use mdfmt::process_md::remove_multiple_blank_lines;
+///
+/// let input = "Line 1\n\n\n\nLine 2\n\nLine 3";
+/// let output = remove_multiple_blank_lines(input);
+/// assert_eq!(output, "Line 1\n\nLine 2\n\nLine 3");
+/// ```
+///
+/// Preserving frontmatter:
+/// ```
+/// use mdfmt::process_md::remove_multiple_blank_lines;
+///
+/// let input = "---\ntitle: Test\n\n\nauthor: Me\n---\n\n\n\nContent";
+/// let output = remove_multiple_blank_lines(input);
+/// assert_eq!(output, "---\ntitle: Test\n\n\nauthor: Me\n---\n\nContent");
+/// ```
+///
+/// Adding spacing around headings:
+/// ```
+/// use mdfmt::process_md::remove_multiple_blank_lines;
+///
+/// let input = "Text\n# Heading\nMore text";
+/// let output = remove_multiple_blank_lines(input);
+/// assert_eq!(output, "Text\n\n# Heading\n\nMore text");
+/// ```
+pub fn remove_multiple_blank_lines(content: &str) -> String {
     let lines: Vec<&str> = content.lines().collect();
     let mut result = Vec::new();
     let mut prev_was_empty = false;
