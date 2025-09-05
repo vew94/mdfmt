@@ -26,28 +26,23 @@ struct Args {
 fn main() {
     let cli = Args::parse();
 
-    let search_dir = if let Some(p) = cli.path {
+    // Handle input path logic
+    let (search_dir, specific_file) = if let Some(p) = cli.path {
         let input_path = Path::new(&p);
         if input_path.is_file() {
-            input_path
-                .parent()
-                .map(|p| p.to_path_buf())
-                .unwrap_or_else(|| match std::env::current_dir() {
-                    Ok(dir) => dir,
-                    Err(e) => {
-                        eprintln!("Error: Failed to get current directory: {}", e);
-                        process::exit(1);
-                    }
-                })
+            // If a specific file is provided, we'll process only that file
+            (None, Some(input_path.to_path_buf()))
         } else if input_path.is_dir() {
-            input_path.to_path_buf()
+            // If a directory is provided, search within it
+            (Some(input_path.to_path_buf()), None)
         } else {
             eprintln!("Error: Path '{}' does not exist or is not accessible", p);
             process::exit(1);
         }
     } else {
+        // No path provided, use current directory
         match std::env::current_dir() {
-            Ok(dir) => dir,
+            Ok(dir) => (Some(dir), None),
             Err(e) => {
                 eprintln!("Error: Failed to get current directory: {}", e);
                 process::exit(1);
@@ -55,14 +50,33 @@ fn main() {
         }
     };
 
-    if cli.verbose {
-        println!("Searching for markdown files in: {}", search_dir.display());
-    }
+    let md_files = if let Some(file) = specific_file {
+        // Process only the specific file if it's a markdown file
+        if cli.verbose {
+            println!("Processing specific file: {}", file.display());
+        }
 
-    let md_files = find_md_files::find_md_files(&search_dir);
+        // Check if the file has .md extension
+        if file.extension().and_then(|ext| ext.to_str()) == Some("md") {
+            vec![file]
+        } else {
+            eprintln!("Error: File '{}' is not a markdown file (.md)", file.display());
+            process::exit(1);
+        }
+    } else if let Some(dir) = search_dir {
+        // Search for markdown files in the directory
+        if cli.verbose {
+            println!("Searching for markdown files in: {}", dir.display());
+        }
+        find_md_files::find_md_files(&dir)
+    } else {
+        // This should never happen, but handle it gracefully
+        eprintln!("Error: No valid path specified");
+        process::exit(1);
+    };
 
     if md_files.is_empty() {
-        println!("No markdown files found in {}", search_dir.display());
+        println!("No markdown files found");
         return;
     }
 
