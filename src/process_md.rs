@@ -56,7 +56,8 @@ pub fn process_md_file<P: AsRef<Path>>(path: P, allow_delete: bool) -> io::Resul
             // Skip processing but don't delete
             return Ok((false, false));
         }
-    }    // Process content to remove multiple consecutive blank lines
+    }
+    // Process content to remove multiple consecutive blank lines
     let processed_content = remove_multiple_blank_lines(&original_content);
 
     // Check if content was modified
@@ -95,8 +96,15 @@ fn remove_multiple_blank_lines(content: &str) -> String {
     };
     let is_list_marker = |line: &str| {
         let trimmed = line.trim();
-        trimmed.starts_with("- ") || trimmed.starts_with("* ") || trimmed.starts_with("+ ") ||
-            (trimmed.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) && trimmed.contains(". "))
+        trimmed.starts_with("- ")
+            || trimmed.starts_with("* ")
+            || trimmed.starts_with("+ ")
+            || (trimmed
+                .chars()
+                .next()
+                .map(|c| c.is_ascii_digit())
+                .unwrap_or(false)
+                && trimmed.contains(". "))
     };
 
     for (i, line) in lines.iter().enumerate() {
@@ -125,11 +133,18 @@ fn remove_multiple_blank_lines(content: &str) -> String {
                 }
                 // Starting a code fence
                 in_code_fence = true;
-                code_fence_marker = if trimmed.starts_with("```") { "```" } else { "~~~" };
+                code_fence_marker = if trimmed.starts_with("```") {
+                    "```"
+                } else {
+                    "~~~"
+                };
                 result.push(*line);
                 prev_was_empty = false;
                 continue;
-            } else if in_code_fence && (trimmed.starts_with(code_fence_marker) && trimmed.len() >= code_fence_marker.len()) {
+            } else if in_code_fence
+                && (trimmed.starts_with(code_fence_marker)
+                    && trimmed.len() >= code_fence_marker.len())
+            {
                 // Ending a code fence - must start with the same marker
                 in_code_fence = false;
                 code_fence_marker = "";
@@ -154,7 +169,8 @@ fn remove_multiple_blank_lines(content: &str) -> String {
                 let prev_was_fence_start = prev_line
                     .map(|l| {
                         let trimmed = l.trim();
-                        (trimmed.starts_with("```") || trimmed.starts_with("~~~")) && !in_frontmatter
+                        (trimmed.starts_with("```") || trimmed.starts_with("~~~"))
+                            && !in_frontmatter
                     })
                     .unwrap_or(false);
 
@@ -163,7 +179,8 @@ fn remove_multiple_blank_lines(content: &str) -> String {
                 let next_is_fence_end = next_line
                     .map(|l| {
                         let trimmed = l.trim();
-                        trimmed.starts_with(code_fence_marker) && trimmed.len() >= code_fence_marker.len()
+                        trimmed.starts_with(code_fence_marker)
+                            && trimmed.len() >= code_fence_marker.len()
                     })
                     .unwrap_or(false);
 
@@ -179,10 +196,13 @@ fn remove_multiple_blank_lines(content: &str) -> String {
         }
 
         // Insert blank line before heading or list group start if previous line is not blank
-        let is_list_group_start = is_list_marker(line) &&
-            (i == 0 || !is_list_marker(lines.get(i.saturating_sub(1)).unwrap_or(&"")));
+        let is_list_group_start = is_list_marker(line)
+            && (i == 0 || !is_list_marker(lines.get(i.saturating_sub(1)).unwrap_or(&"")));
 
-        if (is_heading(line) || is_list_group_start) && !result.is_empty() && result.last().is_some_and(|l| !l.trim().is_empty()) {
+        if (is_heading(line) || is_list_group_start)
+            && !result.is_empty()
+            && result.last().is_some_and(|l| !l.trim().is_empty())
+        {
             result.push("");
         }
 
@@ -200,10 +220,15 @@ fn remove_multiple_blank_lines(content: &str) -> String {
         }
 
         // Insert blank line after heading or list group end if next line is not blank
-        let is_list_group_end = is_list_marker(line) &&
-            !lines.get(i + 1).map(|next| is_list_marker(next)).unwrap_or(false);
+        let is_list_group_end = is_list_marker(line)
+            && !lines
+                .get(i + 1)
+                .map(|next| is_list_marker(next))
+                .unwrap_or(false);
 
-        if (is_heading(line) || is_list_group_end) && lines.get(i + 1).is_some_and(|next| !next.trim().is_empty()) {
+        if (is_heading(line) || is_list_group_end)
+            && lines.get(i + 1).is_some_and(|next| !next.trim().is_empty())
+        {
             result.push("");
         }
     }
@@ -248,7 +273,8 @@ mod tests {
 
     #[test]
     fn test_preserve_frontmatter() {
-        let input = "---\ntitle: Test\n\n\n\nauthor: Me\n---\n\n\n\nContent here\n\n\n\nMore content";
+        let input =
+            "---\ntitle: Test\n\n\n\nauthor: Me\n---\n\n\n\nContent here\n\n\n\nMore content";
         let expected = "---\ntitle: Test\n\n\n\nauthor: Me\n---\n\nContent here\n\nMore content";
         assert_eq!(remove_multiple_blank_lines(input), expected);
     }
@@ -263,7 +289,8 @@ mod tests {
     #[test]
     fn test_preserve_tilde_code_fences() {
         let input = "Some text\n\n\n\n~~~python\ndef hello():\n\n\n\n    print(\"Hello\")\n~~~\n\n\n\nMore text";
-        let expected = "Some text\n\n~~~python\ndef hello():\n\n\n\n    print(\"Hello\")\n~~~\n\nMore text";
+        let expected =
+            "Some text\n\n~~~python\ndef hello():\n\n\n\n    print(\"Hello\")\n~~~\n\nMore text";
         assert_eq!(remove_multiple_blank_lines(input), expected);
     }
 

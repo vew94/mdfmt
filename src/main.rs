@@ -64,7 +64,10 @@ fn main() {
         if file.extension().and_then(|ext| ext.to_str()) == Some("md") {
             vec![file]
         } else {
-            eprintln!("Error: File '{}' is not a markdown file (.md)", file.display());
+            eprintln!(
+                "Error: File '{}' is not a markdown file (.md)",
+                file.display()
+            );
             process::exit(1);
         }
     } else if let Some(dir) = search_dir {
