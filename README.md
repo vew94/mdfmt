@@ -65,6 +65,9 @@ mdfmt --verbose /path/to/docs
 
 # Preview changes without modifying files
 mdfmt --dry-run /path/to/docs
+
+# Allow deletion of empty files
+mdfmt --delete /path/to/docs
 ```
 
 ### Command Line Options
@@ -80,6 +83,7 @@ Arguments:
 Options:
   -v, --verbose  Show verbose output
   -n, --dry-run  Dry run - show what would be done without making changes
+      --delete   Allow deletion of empty files
   -h, --help     Print help
   -V, --version  Print version
 ```

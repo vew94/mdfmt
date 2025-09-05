@@ -21,6 +21,10 @@ struct Args {
     /// Dry run - show what would be done without making changes
     #[arg(short = 'n', long)]
     dry_run: bool,
+
+    /// Allow deletion of empty files
+    #[arg(long)]
+    delete: bool,
 }
 
 fn main() {
@@ -97,7 +101,7 @@ fn main() {
     let results: Vec<_> = md_files
         .par_iter()
         .map(|path| {
-            let result = match process_md::process_md_file(path) {
+            let result = match process_md::process_md_file(path, cli.delete) {
                 Ok((deleted, modified)) => {
                     if deleted {
                         Ok("deleted (empty body with frontmatter or completely empty)".to_string())

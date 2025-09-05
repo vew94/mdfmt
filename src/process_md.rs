@@ -11,18 +11,24 @@ use std::path::Path;
 /// # Arguments
 ///
 /// * `path` - Path to the markdown file to process
+/// * `allow_delete` - Whether to allow deletion of empty files
 ///
 /// # Errors
 ///
 /// Returns an `io::Error` if the file cannot be read or written.
-pub fn process_md_file<P: AsRef<Path>>(path: P) -> io::Result<(bool, bool)> {
+pub fn process_md_file<P: AsRef<Path>>(path: P, allow_delete: bool) -> io::Result<(bool, bool)> {
     let path = path.as_ref();
     let original_content = fs::read_to_string(path)?;
 
     if original_content.trim().is_empty() {
-        // Delete completely empty files
-        fs::remove_file(path)?;
-        return Ok((true, false));
+        // Delete completely empty files only if deletion is allowed
+        if allow_delete {
+            fs::remove_file(path)?;
+            return Ok((true, false));
+        } else {
+            // Skip processing but don't delete
+            return Ok((false, false));
+        }
     }
 
     // Check if file has frontmatter
@@ -41,10 +47,15 @@ pub fn process_md_file<P: AsRef<Path>>(path: P) -> io::Result<(bool, bool)> {
         (None, original_content.as_str())
     };
 
-    // If body is empty or only whitespace and we have frontmatter, delete the file
+    // If body is empty or only whitespace and we have frontmatter, delete the file if allowed
     if frontmatter.is_some() && body.trim().is_empty() {
-        fs::remove_file(path)?;
-        return Ok((true, false));
+        if allow_delete {
+            fs::remove_file(path)?;
+            return Ok((true, false));
+        } else {
+            // Skip processing but don't delete
+            return Ok((false, false));
+        }
     }    // Process content to remove multiple consecutive blank lines
     let processed_content = remove_multiple_blank_lines(&original_content);
 
