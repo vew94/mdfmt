@@ -134,15 +134,43 @@ fn remove_multiple_blank_lines(content: &str) -> String {
 
         // If we're inside frontmatter or code fence, don't process blank lines
         if in_frontmatter || in_code_fence {
+            // Special handling for code fence: remove blank lines immediately after opening or before closing
+            if in_code_fence {
+                let is_blank = line.trim().is_empty();
+
+                // Check if this is immediately after code fence start
+                let prev_line = if i > 0 { lines.get(i - 1) } else { None };
+                let prev_was_fence_start = prev_line
+                    .map(|l| {
+                        let trimmed = l.trim();
+                        (trimmed.starts_with("```") || trimmed.starts_with("~~~")) && !in_frontmatter
+                    })
+                    .unwrap_or(false);
+
+                // Check if next line is code fence end
+                let next_line = lines.get(i + 1);
+                let next_is_fence_end = next_line
+                    .map(|l| {
+                        let trimmed = l.trim();
+                        trimmed.starts_with(code_fence_marker) && trimmed.len() >= code_fence_marker.len()
+                    })
+                    .unwrap_or(false);
+
+                // Skip blank line if it's immediately after fence start or before fence end
+                if is_blank && (prev_was_fence_start || next_is_fence_end) {
+                    continue;
+                }
+            }
+
             result.push(*line);
             prev_was_empty = false;
             continue;
         }
 
         // Insert blank line before heading or list group start if previous line is not blank
-        let is_list_group_start = is_list_marker(line) && 
+        let is_list_group_start = is_list_marker(line) &&
             (i == 0 || !is_list_marker(lines.get(i.saturating_sub(1)).unwrap_or(&"")));
-        
+
         if (is_heading(line) || is_list_group_start) && !result.is_empty() && result.last().is_some_and(|l| !l.trim().is_empty()) {
             result.push("");
         }
@@ -161,9 +189,9 @@ fn remove_multiple_blank_lines(content: &str) -> String {
         }
 
         // Insert blank line after heading or list group end if next line is not blank
-        let is_list_group_end = is_list_marker(line) && 
+        let is_list_group_end = is_list_marker(line) &&
             !lines.get(i + 1).map(|next| is_list_marker(next)).unwrap_or(false);
-            
+
         if (is_heading(line) || is_list_group_end) && lines.get(i + 1).is_some_and(|next| !next.trim().is_empty()) {
             result.push("");
         }
@@ -245,8 +273,22 @@ mod tests {
         // 2. ```inner ends it (because it starts with ```)
         // 3. "more code" is normal text (no blank line processing needed)
         // 4. ``` starts a new code fence
-        // 5. "\n\n\n\ntext" is inside the new code fence (preserved as-is)
-        let expected = "```\ncode\n```inner\n\nmore code\n\n```\n\n\n\ntext";
+        // 5. "\n\n\n\ntext" is inside the new code fence - first blank line after fence start is removed
+        let expected = "```\ncode\n```inner\n\nmore code\n\n```\n\n\ntext";
+        assert_eq!(remove_multiple_blank_lines(input), expected);
+    }
+
+    #[test]
+    fn test_code_fence_no_blank_after_start_before_end() {
+        let input = "Text\n```\n\ncode line\n\n```\nText";
+        let expected = "Text\n\n```\ncode line\n```\n\nText";
+        assert_eq!(remove_multiple_blank_lines(input), expected);
+    }
+
+    #[test]
+    fn test_code_fence_preserve_internal_blanks() {
+        let input = "Text\n```\nline1\n\n\nline2\n```\nText";
+        let expected = "Text\n\n```\nline1\n\n\nline2\n```\n\nText";
         assert_eq!(remove_multiple_blank_lines(input), expected);
     }
 
