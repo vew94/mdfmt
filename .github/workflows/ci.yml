@@ -20,16 +20,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
+  check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
-
-    strategy:
-      matrix:
-        rust-version: [stable, 1.85]
-        os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
       - name: Checkout code
@@ -37,8 +32,6 @@ jobs:
 
       - name: Setup Rust
         uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2.4.4
-        with:
-          version: ${{ matrix.rust-version }}
 
       - name: Cache dependencies
         uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
@@ -52,6 +45,14 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+
+      - name: Update Rust toolchain
+        run: |
+          rustup update stable
+          rustup default stable
+          rustup override set stable
+          rustup component add rustfmt
+          rustup component add clippy
 
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -102,6 +103,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-bench-
             ${{ runner.os }}-cargo-
+
+      - name: Update Rust toolchain
+        run: |
+          rustup update stable
+          rustup default stable
+          rustup override set stable
 
       - name: Run benchmarks
         run: cargo bench --no-run
