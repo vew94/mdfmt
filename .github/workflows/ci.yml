@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
+  check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -47,7 +47,15 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Update Rust toolchain
-        run: rustup update stable && rustup default stable
+        run: |
+          rustup update stable
+          rustup default stable
+          rustup override set stable
+
+      - name: Install rustfmt
+        run: |
+          rustup component add rustfmt --toolchain stable
+          rustup component add rustfmt
 
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -98,6 +106,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-bench-
             ${{ runner.os }}-cargo-
+
+      - name: Update Rust toolchain
+        run: |
+          rustup update stable
+          rustup default stable
+          rustup override set stable
 
       - name: Run benchmarks
         run: cargo bench --no-run
