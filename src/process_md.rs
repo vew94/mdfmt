@@ -28,7 +28,9 @@ pub fn process_md_file<P: AsRef<Path>>(path: P) -> io::Result<(bool, bool)> {
     // Check if file has frontmatter
     let (frontmatter, body) = if let Some(stripped) = original_content.strip_prefix("---\n") {
         if let Some(end_pos) = stripped.find("\n---\n") {
-            let frontmatter_end = end_pos + 8; // 4 for initial "---\n" + 4 for "\n---\n"
+            // end_pos is relative to stripped content, so we need to add back the initial "---\n" (4 chars)
+            // and then add the length of "\n---\n" (5 chars) to get the position after frontmatter
+            let frontmatter_end = 4 + end_pos + 5; // "---\n" + content + "\n---\n"
             let frontmatter = &original_content[..frontmatter_end];
             let body = &original_content[frontmatter_end..];
             (Some(frontmatter), body)
@@ -201,7 +203,7 @@ mod tests {
         // 1. ``` starts code fence
         // 2. ```inner ends it (because it starts with ```)
         // 3. "more code" is normal text (no blank line processing needed)
-        // 4. ``` starts a new code fence 
+        // 4. ``` starts a new code fence
         // 5. "\n\n\n\ntext" is inside the new code fence (preserved as-is)
         let expected = "```\ncode\n```inner\nmore code\n```\n\n\n\ntext";
         assert_eq!(remove_multiple_blank_lines(input), expected);
