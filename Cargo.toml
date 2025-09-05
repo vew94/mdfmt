@@ -12,6 +12,14 @@ rust-version = "1.85"
 keywords = ["markdown", "formatter", "cli", "mdfmt", "frontmatter"]
 categories = ["command-line-utilities", "development-tools"]
 
+[[bin]]
+name = "mdfmt"
+path = "src/main.rs"
+
+[lib]
+name = "mdfmt"
+path = "src/lib.rs"
+
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 glob = "0.3"

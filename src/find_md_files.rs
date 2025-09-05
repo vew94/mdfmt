@@ -1,7 +1,16 @@
+//! File discovery functionality for finding markdown files in directories.
+//!
+//! This module provides utilities to recursively search for markdown files
+//! in directory structures.
+
 use glob::glob;
 use std::path::{Path, PathBuf};
 
 /// Find all markdown files recursively in the given directory.
+///
+/// This function searches for all files with the `.md` extension in the specified
+/// directory and its subdirectories. It only returns regular files, excluding
+/// directories that might end with `.md`.
 ///
 /// # Arguments
 ///
@@ -10,6 +19,17 @@ use std::path::{Path, PathBuf};
 /// # Returns
 ///
 /// A vector of `PathBuf` containing all found markdown files.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use mdfmt::find_md_files::find_md_files;
+/// use std::path::Path;
+///
+/// let current_dir = Path::new(".");
+/// let md_files = find_md_files(current_dir);
+/// println!("Found {} markdown files", md_files.len());
+/// ```
 ///
 /// # Panics
 ///

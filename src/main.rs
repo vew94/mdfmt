@@ -1,10 +1,8 @@
 use clap::Parser;
+use mdfmt::{find_md_files, process_md};
 use rayon::prelude::*;
 use std::path::Path;
 use std::process;
-
-mod find_md_files;
-mod process_md;
 
 /// A Markdown formatter that removes multiple consecutive blank lines and handles empty files.
 #[derive(Parser, Debug)]
@@ -75,7 +73,7 @@ fn main() {
         if cli.verbose {
             println!("Searching for markdown files in: {}", dir.display());
         }
-        find_md_files::find_md_files(&dir)
+        find_md_files(&dir)
     } else {
         // This should never happen, but handle it gracefully
         eprintln!("Error: No valid path specified");
