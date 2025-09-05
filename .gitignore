@@ -1,2 +1,5 @@
-.github
+# GitHub
+.github/**/*.md
+
+# Rust
 target
